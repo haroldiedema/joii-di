@@ -18,16 +18,127 @@
  ------------------------------------------------------------------------------
 */
 if (typeof(_g) === 'undefined' || typeof(_g.$JOII) === 'undefined') {
-    throw new Error('JOII-PlantUML requires JOII to be loaded.');
+    throw new Error('JOII-DI requires JOII to be loaded.');
 }
 
 if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
-    throw new Error('JOII-PlantUML requires JOII 2.2 or higher.');
+    throw new Error('JOII-DI requires JOII 2.2 or higher.');
 }
 
 (function(declare, Class, g) {
 
     declare('DependencyInjection', {
+        /**
+         * Builds a Container by parsing configurations.
+         */
+        ContainerBuilder: Class({
+
+            container : null,
+            api       : null,
+
+            __construct: function(container)
+            {
+                if (typeof(container) === 'undefined' || !container) {
+                    container = new g.DependencyInjection.Container();
+                }
+                this.container = container;
+
+                // Public API
+                this.api = {
+                        getContainer      : this.getContainer.bind(this),
+                        loadConfiguration : this.loadConfiguration.bind(this)
+                };
+
+                return this.api;
+            },
+
+            /**
+             * Returns the container.
+             *
+             * @return DependencyInjection.Container
+             */
+            getContainer: function()
+            {
+                return this.container;
+            },
+
+            /**
+             * Loads configuration which will be parsed and injected into
+             * the Container.
+             *
+             * @return DependencyInjection.ContainerBuilder
+             */
+            loadConfiguration: function(config)
+            {
+                if (typeof(config) !== 'object') {
+                    throw new Error('loadConfiguration expectes an object, ' + typeof(config) + ' given.');
+                }
+                if (typeof(config.parameters) === 'undefined' &&
+                    typeof(config.services) === 'undefined') {
+                    throw new Error("The configuration object must have a 'parameters' and/or 'services' element.");
+                }
+
+                // If we have 'parameters' object in the config...
+                if (typeof(config.parameters) === 'object') {
+                    this.loadParameters(config.parameters);
+                }
+
+                // If we have a 'services' object in the config...
+                if (typeof(config.services) === 'object') {
+                    for (var i in config.services) {
+                        if (!config.services.hasOwnProperty(i)) {
+                            continue;
+                        }
+                        this.loadService(i, config.services[i]);
+                    }
+                }
+
+                return this.api;
+            },
+
+            /**
+             * Iterates over the parameters object and injects them into the
+             * Container being built.
+             *
+             * @access private
+             */
+            loadParameters: function(parameters)
+            {
+                for (var i in parameters) {
+                    if (!parameters.hasOwnProperty(i)) {
+                        continue;
+                    }
+                    this.container.setParameter(i, parameters[i]);
+                }
+            },
+
+            /**
+             * Creates a service definition.
+             *
+             * @access private
+             * @param string id
+             * @param object config
+             */
+            loadService: function(id, config)
+            {
+                var def = this.container.register(id, config['class']);
+
+                // Set constructor arguments
+                if (typeof(config.arguments) !== 'undefined') {
+                    def.setArguments(config.arguments);
+                }
+
+                // Set method calls
+                if (typeof(config.calls) !== 'undefined') {
+                    def.setMethodCalls(config.calls);
+                }
+
+                // Set tags
+                if (typeof(config.tags) !== 'undefined') {
+                    def.setTags(config.tags);
+                }
+            }
+        }),
 
         /**
          * Represents a collection of service definitions.
@@ -56,6 +167,7 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
                     setDefinitions       : this.setDefinitions.bind(this),
                     setDefinition        : this.setDefinition.bind(this),
                     findTaggedServiceIds : this.findTaggedServiceIds.bind(this),
+                    getServiceIds        : this.getServiceIds.bind(this),
 
                     // Parameters
                     setParameters        : this.setParameters.bind(this),
@@ -212,9 +324,23 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
                     }
                     var method = calls[i][0];
                     var args   = this.getParameterArray(calls[i][1] || []);
+                    if (typeof(instance[method]) !== 'function') {
+                        throw new Error('Method ' + method + ' does not exist.');
+                    }
                     instance[method].apply(instance, args);
                 }
                 return instance;
+            },
+
+            getServiceIds: function()
+            {
+                var result = [];
+                for (var i in this.definitions) {
+                    if (this.definitions.hasOwnProperty(i)) {
+                        result.push(i);
+                    }
+                }
+                return result;
             },
 
             /**
@@ -425,7 +551,7 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
             instance  : null,
             api       : null,
             is_public : true,
-            arguments : [],
+            args      : [],
             calls     : [],
             tags      : {},
 
@@ -480,7 +606,7 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
                 if (this.hasInstance()) {
                     throw new Error('Unable to update a definition that is already initialized.');
                 }
-                this.arguments.push(argument);
+                this.args.push(argument);
                 return this.api;
             },
 
@@ -495,7 +621,7 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
                 if (this.hasInstance()) {
                     throw new Error('Unable to update a definition that is already initialized.');
                 }
-                this.arguments = args;
+                this.args = args;
                 return this.api;
             },
 
@@ -506,7 +632,7 @@ if (typeof(_g.$JOII.REVISION) === 'undefined' || _g.$JOII.REVISION < 22) {
              */
             getArguments: function()
             {
-                return this.arguments;
+                return this.args;
             },
 
             /**
