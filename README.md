@@ -1,7 +1,7 @@
 DependencyInjection in JavaScript
 =================================
 
-The DependencyInjection package for JOII allows you to apply the IoC design pattern to your JavaScript projects. The package itself requires JOII to function, but it works flawlessly with native JavaScript functions. This means that you don't have to port your own project to JOII-classes in order for this to work.
+The DependencyInjection package for [JOII](https://github.com/haroldiedema/joii) allows you to apply the IoC design pattern to your JavaScript projects. The package itself requires [JOII](https://github.com/haroldiedema/joii) to function, but it works flawlessly with native JavaScript functions. This means that you don't have to port your own project to [JOII](https://github.com/haroldiedema/joii)-classes in order for this to work.
 
 The functionality in this library has a close resemblance to [Symonfy2's DependencyInjection](http://symfony.com/doc/current/components/dependency_injection/introduction.html) component and can roughly be used in the same way.
 
